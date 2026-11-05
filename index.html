@@ -1,0 +1,2260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Mochi Loaf Cats — Squishy Antigravity Sandbox</title>
+  
+  <!-- Matter.js 2D Physics Engine -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+
+  <!-- Google Fonts: Fredoka & Quicksand -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-cream: #FAF5ED;
+      --charcoal: #4A443F;
+      --charcoal-shadow: #38332F;
+      --peach: #FFB396;
+      --butter: #FFE699;
+      --strawberry: #FFAAA6;
+      --matcha: #C8D6AF;
+      --matcha-dark: #8FA870;
+      --lavender: #D8CCE8;
+      --card-white: #FFFFFF;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      background-color: var(--bg-cream);
+      font-family: 'Fredoka', 'Quicksand', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--charcoal);
+      touch-action: none;
+    }
+
+    /* 1. Dedicated Top Command Bar (Strictly Single Row) */
+    .hud-header {
+      flex: 0 0 62px;
+      height: 62px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 16px;
+      background: var(--card-white);
+      border-bottom: 2px solid var(--charcoal);
+      box-shadow: 0 2px 0 var(--charcoal);
+      z-index: 10;
+      position: relative;
+      white-space: nowrap;
+    }
+
+    /* 2. Middle Sandboxed Cat Play Area */
+    #playArea {
+      flex: 1 1 auto;
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg-cream);
+      /* Subtle cozy rice-paper polka dot texture */
+      background-image: radial-gradient(rgba(140, 125, 110, 0.15) 1.5px, transparent 1.5px);
+      background-size: 24px 24px;
+    }
+
+    #canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+    }
+
+    #canvas.grabbing {
+      cursor: grabbing;
+    }
+
+    #canvas.laser-mode {
+      cursor: crosshair;
+    }
+
+    .brand-pill {
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--card-white);
+      border: 2px solid var(--charcoal);
+      border-radius: 9999px;
+      padding: 6px 14px;
+      box-shadow: 0 3px 0 var(--charcoal);
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      color: var(--charcoal);
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    .brand-badge {
+      background: var(--strawberry);
+      color: white;
+      font-size: 0.68rem;
+      padding: 2px 7px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    /* Controls Group (Strictly Single Row) */
+    .controls-pill {
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex-wrap: nowrap;
+      justify-content: flex-end;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      padding: 4px 8px;
+      border-radius: 9999px;
+      border: 2px solid var(--charcoal);
+      box-shadow: 0 2.5px 0 var(--charcoal);
+      white-space: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .controls-pill::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* Tactile Buttons with Physical 2px Sink */
+    .tactile-btn {
+      pointer-events: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--card-white);
+      color: var(--charcoal);
+      border: 2px solid var(--charcoal);
+      border-radius: 9999px;
+      padding: 6px 12px;
+      font-family: inherit;
+      font-size: 0.84rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 2.5px 0 var(--charcoal);
+      transition: transform 0.08s ease, box-shadow 0.08s ease, background-color 0.15s ease;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .tactile-btn:hover {
+      background: #FFFDF8;
+      transform: translateY(-1px);
+      box-shadow: 0 3px 0 var(--charcoal);
+    }
+
+    .tactile-btn:active, .tactile-btn.active {
+      transform: translateY(2px) !important;
+      box-shadow: 0 0.5px 0 var(--charcoal) !important;
+    }
+
+    .tactile-btn.btn-peach { background: var(--peach); color: white; }
+    .tactile-btn.btn-butter { background: var(--butter); }
+    .tactile-btn.btn-matcha { background: var(--matcha); }
+    .tactile-btn.btn-strawberry { background: var(--strawberry); color: white; }
+    .tactile-btn.btn-laser.active {
+      background: #FF4757;
+      color: white;
+      animation: pulseLaserBtn 0.7s infinite alternate;
+    }
+
+    @keyframes pulseLaserBtn {
+      from { transform: translateY(2px) scale(0.97); }
+      to { transform: translateY(2px) scale(1.03); }
+    }
+
+    .btn-kbd {
+      font-size: 0.65rem;
+      opacity: 0.75;
+      font-family: 'Quicksand', sans-serif;
+      font-weight: 700;
+      background: rgba(0, 0, 0, 0.08);
+      padding: 1px 5px;
+      border-radius: 5px;
+    }
+
+    /* 3. Dedicated Bottom Information Bar (Strictly Single Row) */
+    .hud-footer {
+      flex: 0 0 38px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--card-white);
+      border-top: 2px solid var(--charcoal);
+      box-shadow: 0 -1.5px 0 var(--charcoal);
+      z-index: 10;
+      padding: 0 16px;
+      position: relative;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    .hint-bar {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--charcoal);
+      flex-wrap: nowrap;
+      justify-content: center;
+      white-space: nowrap;
+    }
+
+    .hint-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    }
+
+    .hint-item span.icon {
+      font-size: 0.95rem;
+    }
+
+    .hint-sep {
+      color: #D3CBC3;
+      font-weight: 700;
+      user-select: none;
+    }
+
+    /* Floating Status Toast (Inside Play Area) */
+    .status-toast {
+      position: absolute;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-10px);
+      background: var(--card-white);
+      border: 2px solid var(--charcoal);
+      border-radius: 9999px;
+      padding: 6px 18px;
+      box-shadow: 0 3px 0 var(--charcoal);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--charcoal);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      z-index: 20;
+    }
+
+    .status-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Mobile Adaptations */
+    @media (max-width: 860px) {
+      .hud-header {
+        height: auto;
+        padding: 8px 12px;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .brand-pill {
+        align-self: center;
+      }
+      .controls-pill {
+        border-radius: 20px;
+      }
+      .hud-footer {
+        height: auto;
+        padding: 8px 10px;
+      }
+      .hint-bar {
+        font-size: 0.72rem;
+        gap: 10px;
+      }
+      .btn-kbd { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 1. Top Command Bar (Dedicated Header - Strictly Single Bar) -->
+  <header class="hud-header">
+    <div class="brand-pill">
+      <span>🐱 Mochi Loaves</span>
+      <span class="brand-badge">Squishy Sandbox</span>
+    </div>
+
+    <div class="controls-pill">
+      <button class="tactile-btn btn-butter" id="btnSpawnCat" title="Spawn a squishy mochi cat (C)">
+        <span>+ 🐱 Mochi</span>
+        <span class="btn-kbd">C</span>
+      </button>
+
+      <button class="tactile-btn" id="btnGravity" title="Cycle Smooth Gravity Flow (Space)">
+        <span id="gravityIcon">🌍</span>
+        <span id="gravityText">Earth Gravity</span>
+        <span class="btn-kbd">Space</span>
+      </button>
+
+      <button class="tactile-btn btn-laser" id="btnLaser" title="Hold Right-Click anywhere or toggle Laser (L)">
+        <span>🔴 Laser</span>
+        <span class="btn-kbd">L</span>
+      </button>
+
+      <button class="tactile-btn btn-peach" id="btnBox" title="Drop a Cardboard Box (B)">
+        <span>📦 Box</span>
+        <span class="btn-kbd">B</span>
+      </button>
+
+      <button class="tactile-btn btn-matcha" id="btnCatnip" title="Catnip Cloud - Rainbow Zoomies! (N)">
+        <span>🌿 Catnip</span>
+        <span class="btn-kbd">N</span>
+      </button>
+
+      <button class="tactile-btn" id="btnReset" title="Reset Sandbox (R)">
+        <span>🧹 Reset</span>
+        <span class="btn-kbd">R</span>
+      </button>
+
+      <button class="tactile-btn" id="btnAudio" title="Toggle Sound FX (M)">
+        <span id="audioIcon">🔊</span>
+        <span class="btn-kbd">M</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- 2. Middle Sandboxed Cat Play Area (Clean Canvas Container) -->
+  <main id="playArea">
+    <canvas id="canvas"></canvas>
+    <!-- Status Notification Toast inside play area -->
+    <div class="status-toast" id="statusToast">✨ Welcome to Mochi Loaves!</div>
+  </main>
+
+  <!-- 3. Bottom Information Bar (Dedicated Footer - Strictly Single Row) -->
+  <footer class="hud-footer">
+    <div class="hint-bar">
+      <div class="hint-item"><span class="icon">🖐️</span> <span>Left-Drag: Pick Up & Toss Cat</span></div>
+      <span class="hint-sep">•</span>
+      <div class="hint-item"><span class="icon">🔴</span> <span>Right-Click: Laser Chase</span></div>
+      <span class="hint-sep">•</span>
+      <div class="hint-item"><span class="icon">🥰</span> <span>Hover: Pet & Purr</span></div>
+      <span class="hint-sep">•</span>
+      <div class="hint-item"><span class="icon">📦</span> <span>Click Cat in Box to Eject</span></div>
+      <span class="hint-sep">•</span>
+      <div class="hint-item"><span class="icon">✕</span> <span>Click Box Badge to Delete</span></div>
+    </div>
+  </footer>
+
+  <script>
+    /**
+     * =========================================================================
+     * MOCHI LOAF CATS — ULTRA-TACTILE PROCEDURAL PHYSICS SANDBOX
+     * Complete production-ready implementation (Single Self-Contained Deliverable)
+     * =========================================================================
+     */
+
+    // --- Audio Synthesizer Engine (Web Audio API: Pure native synthesis) ---
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+        // Pentatonic scale chime frequencies (C5, D5, E5, G5, A5, C6, D6, E6)
+        this.pentatonic = [523.25, 587.33, 659.25, 783.99, 880.00, 1046.50, 1174.66, 1318.51];
+        this.purrGain = null;
+        this.purrOsc = null;
+        this.purrLfo = null;
+        this.isPurring = false;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+          this.setupPurrNode();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      setupPurrNode() {
+        try {
+          // Modulated 45Hz low-frequency warm purr rumble
+          this.purrOsc = this.ctx.createOscillator();
+          this.purrOsc.type = 'triangle';
+          this.purrOsc.frequency.value = 45; // Warm chest frequency
+
+          this.purrLfo = this.ctx.createOscillator();
+          this.purrLfo.type = 'sine';
+          this.purrLfo.frequency.value = 22; // Fluttering cadence
+
+          const lfoGain = this.ctx.createGain();
+          lfoGain.gain.value = 16;
+          this.purrLfo.connect(this.purrOsc.frequency);
+
+          this.purrGain = this.ctx.createGain();
+          this.purrGain.gain.value = 0; // Off initially
+
+          const lowpass = this.ctx.createBiquadFilter();
+          lowpass.type = 'lowpass';
+          lowpass.frequency.value = 150;
+
+          this.purrOsc.connect(lowpass);
+          lowpass.connect(this.purrGain);
+          this.purrGain.connect(this.ctx.destination);
+
+          this.purrOsc.start();
+          this.purrLfo.start();
+        } catch (e) {
+          console.warn("Web Audio purr setup error:", e);
+        }
+      }
+
+      setPurr(active) {
+        if (this.muted || !this.ctx || !this.purrGain) return;
+        const now = this.ctx.currentTime;
+        if (active && !this.isPurring) {
+          this.isPurring = true;
+          this.purrGain.gain.cancelScheduledValues(now);
+          this.purrGain.gain.setTargetAtTime(0.08, now, 0.12);
+        } else if (!active && this.isPurring) {
+          this.isPurring = false;
+          this.purrGain.gain.cancelScheduledValues(now);
+          this.purrGain.gain.setTargetAtTime(0, now, 0.15);
+        }
+      }
+
+      // Soft musical bloop on cat-cat or cat-wall collision
+      playChime(velocity = 5) {
+        if (this.muted || !this.ctx) return;
+        const noteIdx = Math.floor(Math.random() * this.pentatonic.length);
+        const freq = this.pentatonic[noteIdx];
+        const volume = Math.min(0.26, Math.max(0.04, velocity * 0.022));
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+
+        const now = this.ctx.currentTime;
+        gain.gain.setValueAtTime(volume, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.33);
+      }
+
+      // Slingshot elastic spring boing (300Hz -> 650Hz)
+      playBoing(power = 1) {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'triangle';
+        const startFreq = 280;
+        const endFreq = 580 + Math.min(280, power * 22);
+        osc.frequency.setValueAtTime(startFreq, now);
+        osc.frequency.exponentialRampToValueAtTime(endFreq, now + 0.15);
+
+        gain.gain.setValueAtTime(0.24, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.27);
+      }
+
+      // High-frequency pitch-swept squeak for laser pounce (800Hz -> 1400Hz)
+      playSqueak() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(820, now);
+        osc.frequency.exponentialRampToValueAtTime(1420, now + 0.08);
+
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.13);
+      }
+
+      // Catnip sparkle arpeggio
+      playCatnipSparkle() {
+        if (this.muted || !this.ctx) return;
+        const notes = [659.25, 783.99, 987.77, 1318.51, 1567.98];
+        notes.forEach((freq, idx) => {
+          setTimeout(() => {
+            if (this.muted || !this.ctx) return;
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now);
+            gain.gain.setValueAtTime(0.16, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.25);
+          }, idx * 55);
+        });
+      }
+
+      // Cute pop for box & spawn
+      playPop() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(560, now);
+        osc.frequency.exponentialRampToValueAtTime(220, now + 0.09);
+
+        gain.gain.setValueAtTime(0.28, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.12);
+      }
+    }
+
+    const audio = new SoundEngine();
+
+    // --- Matter.js Physics Setup ---
+    const { Engine, World, Bodies, Body, Events, Vector, Composite } = Matter;
+
+    const engine = Engine.create({
+      gravity: { x: 0, y: 1.0, scale: 0.001 }, // Default Earth
+      positionIterations: 8,
+      velocityIterations: 8
+    });
+    const world = engine.world;
+
+    // --- Canvas & Sandboxed Viewport Setup ---
+    const playArea = document.getElementById('playArea');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    let width = (canvas.width = playArea.clientWidth);
+    let height = (canvas.height = playArea.clientHeight);
+
+    // Static Wall Boundaries around play area edges (Top header & bottom footer are boundaries)
+    let walls = [];
+    function buildWalls() {
+      walls.forEach(w => Composite.remove(world, w));
+      const thickness = 200;
+      walls = [
+        // Floor (Immediately at the top edge of the bottom information bar)
+        Bodies.rectangle(width / 2, height + thickness / 2, width + 600, thickness, {
+          isStatic: true,
+          restitution: 0.05, // Zero bounce on ground to prevent micro-vibration
+          friction: 0.35,
+          frictionStatic: 0.5,
+          label: 'wall_bottom'
+        }),
+        // Ceiling (Immediately at the bottom edge of the top command bar)
+        Bodies.rectangle(width / 2, -thickness / 2, width + 600, thickness, {
+          isStatic: true,
+          restitution: 0.05, // Zero bounce on ceiling
+          friction: 0.35,
+          frictionStatic: 0.5,
+          label: 'wall_top'
+        }),
+        // Left wall
+        Bodies.rectangle(-thickness / 2, height / 2, thickness, height + 600, {
+          isStatic: true,
+          restitution: 0.2,
+          friction: 0.2,
+          label: 'wall_left'
+        }),
+        // Right wall
+        Bodies.rectangle(width + thickness / 2, height / 2, thickness, height + 600, {
+          isStatic: true,
+          restitution: 0.2,
+          friction: 0.2,
+          label: 'wall_right'
+        })
+      ];
+      Composite.add(world, walls);
+    }
+    buildWalls();
+
+    window.addEventListener('resize', () => {
+      width = canvas.width = playArea.clientWidth;
+      height = canvas.height = playArea.clientHeight;
+      buildWalls();
+    });
+
+    // --- 5 Distinct Cat Varieties Specification ---
+    const CAT_VARIETIES = [
+      {
+        id: 0,
+        name: "Cream & Calico",
+        baseColor: "#FFFDF5",
+        patchOrange: "#E6813B",
+        patchGrey: "#636F7E",
+        eyeColor: "#579D6D", // Jade green
+        noseColor: "#FFA299",
+        bellyColor: "#FFFFFF"
+      },
+      {
+        id: 1,
+        name: "Ginger Tabby",
+        baseColor: "#F7A855",
+        stripeColor: "#BD5E1F",
+        eyeColor: "#EAA62A", // Honey gold
+        noseColor: "#FF8C7B",
+        bellyColor: "#FFF2DD"
+      },
+      {
+        id: 2,
+        name: "Tuxedo",
+        baseColor: "#353238", // Soft charcoal black
+        chestColor: "#FFFFFF",
+        eyeColor: "#9CCD4E", // Vibrant yellow-green
+        noseColor: "#FFAEB5",
+        bellyColor: "#FFFFFF"
+      },
+      {
+        id: 3,
+        name: "Siamese Point",
+        baseColor: "#FAF3E6", // Pale cream
+        pointColor: "#543C2E", // Warm seal brown
+        eyeColor: "#2A7AEB", // Piercing sapphire blue
+        noseColor: "#422E22",
+        bellyColor: "#FAF3E6"
+      },
+      {
+        id: 4,
+        name: "Peach Mochi",
+        baseColor: "#FFC2D1", // Soft pastel strawberry
+        blushColor: "#FF8DA8",
+        eyeColor: "#E4428D", // Ruby jewel
+        noseColor: "#FF5E85",
+        bellyColor: "#FFF6F9"
+      }
+    ];
+
+    let varietyCycleIndex = 0;
+
+    // --- Particle System ---
+    const particles = [];
+    function spawnParticle(x, y, type, color = '#FFB396') {
+      particles.push({
+        x,
+        y,
+        vx: (Math.random() - 0.5) * 3.5,
+        vy: (Math.random() - 0.5) * 3.5 - 1.5,
+        life: 1.0,
+        decay: 0.015 + Math.random() * 0.02,
+        size: 7 + Math.random() * 6,
+        type, // 'heart', 'star', 'bubble', 'zzz', 'leaf'
+        color,
+        angle: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 0.1
+      });
+    }
+
+    // Floating speech / action badges
+    const floatingToasts = [];
+    function spawnFloatingText(x, y, text, color = '#4A443F') {
+      floatingToasts.push({
+        x,
+        y,
+        text,
+        color,
+        life: 1.0,
+        decay: 0.02
+      });
+    }
+
+    // --- Mochi Loaf Cat Class ---
+    class MochiCat {
+      constructor(x, y, variety = null) {
+        this.w = 98; // Loaf length
+        this.h = 60; // Loaf height
+        this.variety = variety !== null ? variety : CAT_VARIETIES[varietyCycleIndex % CAT_VARIETIES.length];
+        varietyCycleIndex++;
+
+        // Matter.js body with smooth chamfered pillowy corners
+        this.body = Bodies.rectangle(x, y, this.w, this.h, {
+          chamfer: { radius: 26 },
+          restitution: 0.86, // Mochi elasticity
+          friction: 0.12,
+          frictionAir: 0.012,
+          density: 0.0015,
+          label: 'cat'
+        });
+        this.body.catRef = this;
+        Composite.add(world, this.body);
+
+        // Squash & Stretch Spring Physics
+        this.scaleX = 1;
+        this.scaleY = 1;
+        this.velScaleX = 0;
+        this.velScaleY = 0;
+        this.squashAngle = 0;
+
+        // Visual States & Living Expressions
+        this.facing = 1; // 1: right, -1: left
+        this.eyeLook = { x: 0, y: 0 };
+        this.expression = 'normal'; // 'normal', 'happy', 'laser', 'dizzy', 'sleep'
+        this.dizzyTimer = 0;
+        this.stationaryTimer = 0;
+        this.sleepZzzTimer = 0;
+        this.blinkTimer = 2 + Math.random() * 3;
+        this.blinkProgress = 0;
+
+        // Micro-interactions
+        this.isHovered = false;
+        this.isPetting = false;
+        this.petHeartsTimer = 0;
+        this.earTwitchTimer = 1 + Math.random() * 4;
+        this.earTwitchPhase = 0;
+        this.tailAngle = 0;
+
+        // Laser Hunt & 3-Frame Butt-Wiggle State
+        this.isLaserHunting = false;
+        this.laserPrepTimer = 0; // 0.25s butt wiggle prep
+        this.buttWigglePhase = 0;
+        this.huntPounceTimer = 0;
+
+        // Catnip Zoomie State
+        this.zoomieTimer = 0;
+        this.rainbowTrail = []; // Historical positions
+
+        // Box interaction
+        this.inBox = null;
+        this.boxCooldown = 0;
+
+        // Paws kick animation
+        this.pawKickPhase = 0;
+      }
+
+      triggerSquash(normalX, normalY, impactMagnitude) {
+        this.squashAngle = Math.atan2(normalY, normalX);
+        const intensity = Math.min(0.48, impactMagnitude * 0.04);
+        this.scaleX = 1 + intensity;
+        this.scaleY = Math.max(0.55, 1 - intensity);
+        // Spring velocity kick
+        this.velScaleX = (1 - this.scaleX) * 16;
+        this.velScaleY = (1 - this.scaleY) * 16;
+      }
+
+      update(dt, mousePos, laserActive) {
+        if (this.boxCooldown > 0) this.boxCooldown -= dt;
+
+        // If locked inside cardboard box, follow box position
+        if (this.inBox) {
+          const boxPos = this.inBox.body.position;
+          Body.setPosition(this.body, { x: boxPos.x, y: boxPos.y - 12 });
+          Body.setVelocity(this.body, this.inBox.body.velocity);
+          Body.setAngle(this.body, this.inBox.body.angle);
+          this.expression = 'happy';
+          return;
+        }
+
+        const vel = this.body.velocity;
+        const speed = Math.hypot(vel.x, vel.y);
+
+        // --- Squash & Stretch Harmonic Oscillator Damping ---
+        const k = 240; // Spring stiffness
+        const damping = 15; // Damping
+        const ax = -k * (this.scaleX - 1) - damping * this.velScaleX;
+        const ay = -k * (this.scaleY - 1) - damping * this.velScaleY;
+        this.velScaleX += ax * dt;
+        this.velScaleY += ay * dt;
+        this.scaleX += this.velScaleX * dt;
+        this.scaleY += this.velScaleY * dt;
+
+        // Mid-air high velocity stretch along motion vector
+        if (speed > 4.5 && Math.abs(this.scaleX - 1) < 0.08) {
+          this.squashAngle = Math.atan2(vel.y, vel.x);
+          const stretch = Math.min(0.28, speed * 0.014);
+          this.scaleX = 1 + stretch;
+          this.scaleY = 1 - stretch * 0.6;
+        }
+
+        // --- Facing Direction Smooth Transition ---
+        if (laserActive) {
+          this.facing = mousePos.x > this.body.position.x ? 1 : -1;
+        } else if (Math.abs(vel.x) > 0.4) {
+          this.facing = vel.x > 0 ? 1 : -1;
+        }
+
+        // --- Eye Pupil Mouse Tracking (Converted to Cat's Local Angle) ---
+        const dx = mousePos.x - this.body.position.x;
+        const dy = mousePos.y - this.body.position.y;
+        // Transform world delta into cat's local rotated coordinate frame
+        const catAngle = this.body.angle;
+        const localX = (dx * Math.cos(-catAngle) - dy * Math.sin(-catAngle)) * this.facing;
+        const localY = dx * Math.sin(-catAngle) + dy * Math.cos(-catAngle);
+        const localDist = Math.hypot(localX, localY);
+        const lookMag = Math.min(5.5, localDist * 0.025);
+        const lookAngle = Math.atan2(localY, localX);
+
+        const targetLookX = Math.cos(lookAngle) * lookMag;
+        const targetLookY = Math.sin(lookAngle) * lookMag;
+        this.eyeLook.x += (targetLookX - this.eyeLook.x) * 0.22;
+        this.eyeLook.y += (targetLookY - this.eyeLook.y) * 0.22;
+
+        // --- Distance to Mouse (Petting / Hover) ---
+        const mouseDist = Math.hypot(dx, dy);
+        this.isHovered = mouseDist < 62;
+
+        // --- Expression State Machine ---
+        if (this.zoomieTimer > 0) {
+          this.zoomieTimer -= dt;
+          this.expression = 'happy';
+          this.pawKickPhase += 28 * dt;
+
+          // Rainbow Trail recording
+          this.rainbowTrail.push({ x: this.body.position.x, y: this.body.position.y });
+          if (this.rainbowTrail.length > 20) this.rainbowTrail.shift();
+
+          // High-speed zoomie thrusts
+          if (Math.random() < 0.2) {
+            Body.applyForce(this.body, this.body.position, {
+              x: (Math.random() - 0.5) * 0.015,
+              y: (Math.random() - 0.5) * 0.015
+            });
+          }
+        } else {
+          this.rainbowTrail = [];
+        }
+
+        if (this.dizzyTimer > 0) {
+          this.dizzyTimer -= dt;
+          this.expression = 'dizzy';
+        } else if (laserActive) {
+          this.expression = 'laser';
+          this.stationaryTimer = 0;
+
+          if (!this.isLaserHunting) {
+            // First waking up into laser hunt: start 0.25s butt-wiggle prep
+            this.isLaserHunting = true;
+            this.laserPrepTimer = 0.25;
+            this.buttWigglePhase = 0;
+            spawnFloatingText(this.body.position.x, this.body.position.y - 25, 'wiggle wiggle!', '#FFAAA6');
+          }
+
+          if (this.laserPrepTimer > 0) {
+            // 3-Frame rapid butt-wiggle animation
+            this.laserPrepTimer -= dt;
+            this.buttWigglePhase += 38 * dt;
+          } else {
+            // Launch forward furiously kicking paws toward red dot!
+            this.pawKickPhase += 24 * dt;
+            const ldist = Math.hypot(dx, dy);
+            if (ldist > 25) {
+              const forceMag = 0.0035 * this.body.mass;
+              Body.applyForce(this.body, this.body.position, {
+                x: (dx / ldist) * forceMag,
+                y: (dy / ldist) * forceMag
+              });
+              this.huntPounceTimer += dt;
+              if (this.huntPounceTimer > 0.42) {
+                audio.playSqueak();
+                this.huntPounceTimer = 0;
+              }
+            }
+          }
+        } else {
+          this.isLaserHunting = false;
+          this.laserPrepTimer = 0;
+
+          // Check if spinning fast or heavy tumble
+          if (Math.abs(this.body.angularVelocity) > 0.16 || speed > 18) {
+            this.dizzyTimer = 0.85;
+            this.expression = 'dizzy';
+          } else if (this.isHovered) {
+            this.expression = 'happy';
+            this.stationaryTimer = 0;
+            this.isPetting = true;
+            // Spawn gentle hearts while pet
+            this.petHeartsTimer += dt;
+            if (this.petHeartsTimer > 0.3) {
+              spawnParticle(
+                this.body.position.x + (Math.random() - 0.5) * 36,
+                this.body.position.y - 24,
+                'heart',
+                '#FF8EA8'
+              );
+              this.petHeartsTimer = 0;
+            }
+          } else {
+            this.isPetting = false;
+            // Stationary Sleep Detection (stationary for > 4s)
+            if (speed < 0.35) {
+              this.stationaryTimer += dt;
+              if (this.stationaryTimer > 4.0) {
+                this.expression = 'sleep';
+                this.sleepZzzTimer += dt;
+                if (this.sleepZzzTimer > 0.8) {
+                  spawnParticle(
+                    this.body.position.x + 24 * this.facing,
+                    this.body.position.y - 18,
+                    'zzz',
+                    '#8C7A6B'
+                  );
+                  this.sleepZzzTimer = 0;
+                }
+              } else {
+                this.expression = 'normal';
+              }
+            } else {
+              this.stationaryTimer = 0;
+              this.expression = 'normal';
+            }
+          }
+        }
+
+        // Blinking cycle for living eyes
+        this.blinkTimer -= dt;
+        if (this.blinkTimer <= 0) {
+          this.blinkProgress += dt * 10;
+          if (this.blinkProgress >= 1) {
+            this.blinkProgress = 0;
+            this.blinkTimer = 2.5 + Math.random() * 4;
+          }
+        }
+
+        // Ear twitching
+        this.earTwitchTimer -= dt;
+        if (this.earTwitchTimer <= 0) {
+          this.earTwitchPhase += dt * 35;
+          if (this.earTwitchPhase > Math.PI * 2) {
+            this.earTwitchPhase = 0;
+            this.earTwitchTimer = 2 + Math.random() * 5;
+          }
+        }
+
+        // Tail wagging
+        const tailSpeed = this.isLaserHunting ? 26 : this.zoomieTimer > 0 ? 30 : 4;
+        this.tailAngle = Math.sin(Date.now() * 0.003 * tailSpeed) * (this.isLaserHunting ? 0.45 : 0.22);
+
+        // Anti-corner-stuck Autonomous Physics for Cats (Gentle lateral nudge only)
+        const cpos = this.body.position;
+        const isNearSide = cpos.x < 70 || cpos.x > width - 70;
+        if (isNearSide && !this.inBox && speed < 0.25) {
+          this.cornerStuckTimer = (this.cornerStuckTimer || 0) + dt;
+          if (this.cornerStuckTimer > 0.6) {
+            const pushX = cpos.x < width / 2 ? 0.004 * this.body.mass : -0.004 * this.body.mass;
+            Body.applyForce(this.body, cpos, { x: pushX, y: 0 });
+            this.cornerStuckTimer = 0;
+          }
+        } else {
+          this.cornerStuckTimer = 0;
+        }
+      }
+
+      draw(ctx) {
+        const pos = this.body.position;
+        const angle = this.body.angle;
+
+        // Draw Rainbow Ribbon Trail if active
+        if (this.rainbowTrail.length > 2) {
+          ctx.save();
+          for (let i = 0; i < this.rainbowTrail.length - 1; i++) {
+            const p1 = this.rainbowTrail[i];
+            const p2 = this.rainbowTrail[i + 1];
+            const progress = i / this.rainbowTrail.length;
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = `hsla(${(i * 24 + Date.now() * 0.1) % 360}, 85%, 65%, ${progress * 0.7})`;
+            ctx.lineWidth = 14 * progress;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+
+        ctx.save();
+        ctx.translate(pos.x, pos.y);
+        ctx.rotate(angle);
+
+        // Apply oriented squash & stretch deformation
+        ctx.rotate(this.squashAngle);
+        ctx.scale(this.scaleX, this.scaleY);
+        ctx.rotate(-this.squashAngle);
+
+        // Flip horizontally based on facing direction
+        ctx.scale(this.facing, 1);
+
+        // Butt wiggle offset when laser hunting (rapid 3-frame oscillation)
+        let wiggleOffset = 0;
+        if (this.isLaserHunting && this.laserPrepTimer > 0) {
+          wiggleOffset = Math.sin(this.buttWigglePhase) * 6;
+        }
+
+        this.renderProceduralLoaf(ctx, wiggleOffset);
+
+        ctx.restore();
+      }
+
+      renderProceduralLoaf(ctx, wiggleOffset = 0) {
+        const v = this.variety;
+        const w = this.w;
+        const h = this.h;
+        const hw = w / 2;
+        const hh = h / 2;
+
+        // --- 1. Tail (Trailing behind rear rump) ---
+        ctx.save();
+        ctx.translate(-hw + 8, hh - 14 + wiggleOffset);
+        ctx.rotate(this.tailAngle);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.bezierCurveTo(-18, -12, -32, -4, -36, -20);
+        ctx.strokeStyle = v.id === 3 ? v.pointColor : v.baseColor;
+        ctx.lineWidth = 13;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+
+        // Tail outline
+        ctx.strokeStyle = '#4A443F';
+        ctx.lineWidth = 2.4;
+        ctx.stroke();
+
+        // Siamese point or Tabby rings on tail
+        if (v.id === 1) { // Tabby tail rings
+          ctx.beginPath();
+          ctx.arc(-22, -9, 5, 0, Math.PI * 2);
+          ctx.arc(-30, -15, 4, 0, Math.PI * 2);
+          ctx.fillStyle = v.stripeColor;
+          ctx.fill();
+        }
+        ctx.restore();
+
+        // --- 2. Curved Ears (Rounded tips & inner pink shading) ---
+        const twitchL = Math.sin(this.earTwitchPhase) * 0.15;
+        const twitchR = Math.cos(this.earTwitchPhase) * 0.12;
+
+        // Left / Back Ear
+        ctx.save();
+        ctx.translate(hw - 32, -hh + 6);
+        ctx.rotate(-0.35 + twitchL);
+        this.drawSingleEar(ctx, v, false);
+        ctx.restore();
+
+        // Right / Front Ear
+        ctx.save();
+        ctx.translate(hw - 10, -hh + 4);
+        ctx.rotate(0.2 + twitchR);
+        this.drawSingleEar(ctx, v, true);
+        ctx.restore();
+
+        // --- 3. Main Loaf Body (Organic bezier curves, squishy belly) ---
+        ctx.beginPath();
+        // Snout Front
+        ctx.moveTo(hw - 14, -hh + 6);
+        // Head dome curving forward
+        ctx.bezierCurveTo(hw + 4, -hh + 2, hw + 14, -hh + 14, hw + 14, -hh + 28);
+        // Chubby Cheek curving down to chin
+        ctx.bezierCurveTo(hw + 14, hh - 10, hw + 10, hh - 2, hw + 2, hh + 2);
+        // Front Chest down to sagging Belly
+        ctx.bezierCurveTo(hw - 16, hh + 6, 0, hh + 6, -hw + 12, hh + 2 + wiggleOffset);
+        // Plump Rump curving around rear
+        ctx.bezierCurveTo(-hw - 12, hh - 4 + wiggleOffset, -hw - 12, -hh + 12 + wiggleOffset, -hw + 4, -hh + 6 + wiggleOffset);
+        // Soft pillowy Back curving forward to nape
+        ctx.bezierCurveTo(-hw + 22, -hh - 3, hw - 28, -hh - 3, hw - 14, -hh + 6);
+        ctx.closePath();
+
+        // Fill Base Color
+        ctx.fillStyle = v.baseColor;
+        ctx.fill();
+
+        // Variety Markings
+        this.drawCoatMarkings(ctx, v, hw, hh, wiggleOffset);
+
+        // Body Charcoal Outline
+        ctx.strokeStyle = '#4A443F';
+        ctx.lineWidth = 2.8;
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+
+        // --- 4. Tucked Paws (Stubby little front paws) ---
+        ctx.save();
+        const pawKick = Math.sin(this.pawKickPhase) * 4;
+        // Front Paw 1
+        ctx.beginPath();
+        ctx.arc(hw - 22 + pawKick, hh + 2, 8, 0, Math.PI);
+        ctx.fillStyle = v.id === 2 ? '#FFFFFF' : v.id === 3 ? v.pointColor : v.baseColor;
+        ctx.fill();
+        ctx.strokeStyle = '#4A443F';
+        ctx.lineWidth = 2.2;
+        ctx.stroke();
+
+        // Front Paw 2
+        ctx.beginPath();
+        ctx.arc(hw - 38 - pawKick, hh + 2, 7.5, 0, Math.PI);
+        ctx.fillStyle = v.id === 2 ? '#FFFFFF' : v.id === 3 ? v.pointColor : v.baseColor;
+        ctx.fill();
+        ctx.strokeStyle = '#4A443F';
+        ctx.lineWidth = 2.2;
+        ctx.stroke();
+        ctx.restore();
+
+        // --- 5. Chubby Cheeks, Whisker Dots & Delicate Whiskers ---
+        this.drawWhiskersAndCheeks(ctx, hw, hh);
+
+        // --- 6. Living Eyes & Dynamic Gaze Engine ---
+        this.drawEyes(ctx, v, hw, hh);
+
+        // --- 7. Cute Triangle Nose & :3 Cat Smile ---
+        this.drawNoseAndMouth(ctx, v, hw, hh);
+
+        // --- 8. Dizzy Orbiting Stars if Dizzy ---
+        if (this.expression === 'dizzy') {
+          this.drawOrbitingStars(ctx, hw, hh);
+        }
+      }
+
+      drawSingleEar(ctx, v, isFront) {
+        ctx.beginPath();
+        ctx.moveTo(-10, 0);
+        ctx.bezierCurveTo(-8, -20, 2, -26, 8, -20);
+        ctx.bezierCurveTo(12, -14, 14, -2, 10, 0);
+        ctx.closePath();
+
+        // Ear fill
+        ctx.fillStyle = v.id === 3 ? v.pointColor : v.id === 2 && !isFront ? '#353238' : v.baseColor;
+        ctx.fill();
+
+        // Soft pink inner ear
+        ctx.beginPath();
+        ctx.moveTo(-5, -2);
+        ctx.bezierCurveTo(-3, -15, 3, -18, 6, -14);
+        ctx.bezierCurveTo(8, -10, 7, -2, 4, -2);
+        ctx.closePath();
+        ctx.fillStyle = '#FFAAA6';
+        ctx.fill();
+
+        // Outline
+        ctx.strokeStyle = '#4A443F';
+        ctx.lineWidth = 2.4;
+        ctx.stroke();
+      }
+
+      drawCoatMarkings(ctx, v, hw, hh, wiggleOffset) {
+        ctx.save();
+        ctx.clip(); // Restrict markings inside cat body
+
+        if (v.id === 0) {
+          // --- Cream & Calico: Asymmetrical ginger & slate patches ---
+          // Ginger patch over forehead & nape
+          ctx.beginPath();
+          ctx.arc(hw - 14, -hh + 10, 22, 0, Math.PI * 2);
+          ctx.fillStyle = v.patchOrange;
+          ctx.fill();
+
+          // Slate grey patch over rear hip
+          ctx.beginPath();
+          ctx.arc(-hw + 14, hh - 10 + wiggleOffset, 24, 0, Math.PI * 2);
+          ctx.fillStyle = v.patchGrey;
+          ctx.fill();
+
+          // Lighter white chest bib
+          ctx.beginPath();
+          ctx.arc(hw - 10, hh, 18, 0, Math.PI * 2);
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fill();
+        } else if (v.id === 1) {
+          // --- Ginger Tabby: Marmalade tiger stripes ---
+          ctx.strokeStyle = v.stripeColor;
+          ctx.lineWidth = 3.5;
+          ctx.lineCap = 'round';
+
+          // Forehead M markings
+          ctx.beginPath();
+          ctx.moveTo(hw - 8, -hh + 6); ctx.lineTo(hw - 12, -hh + 18);
+          ctx.moveTo(hw - 14, -hh + 6); ctx.lineTo(hw - 17, -hh + 18);
+          ctx.moveTo(hw - 20, -hh + 7); ctx.lineTo(hw - 22, -hh + 19);
+          ctx.stroke();
+
+          // Back tiger stripes
+          ctx.beginPath();
+          ctx.moveTo(0, -hh + 2); ctx.bezierCurveTo(2, -hh + 16, -2, hh - 10, 0, hh);
+          ctx.moveTo(-18, -hh + 4); ctx.bezierCurveTo(-16, -hh + 18, -20, hh - 8, -18, hh);
+          ctx.moveTo(-34, -hh + 8); ctx.bezierCurveTo(-32, -hh + 18, -36, hh - 6, -34, hh);
+          ctx.stroke();
+
+          // Creamy belly
+          ctx.beginPath();
+          ctx.ellipse(0, hh + 4, 34, 14, 0, 0, Math.PI * 2);
+          ctx.fillStyle = v.bellyColor;
+          ctx.fill();
+        } else if (v.id === 2) {
+          // --- Tuxedo: White chest bib, belly & mustache ---
+          ctx.beginPath();
+          ctx.ellipse(hw - 18, hh - 4, 24, 20, 0.2, 0, Math.PI * 2);
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fill();
+
+          // Milk mustache marking on cheeks
+          ctx.beginPath();
+          ctx.ellipse(hw + 2, -hh + 26, 11, 7, 0, 0, Math.PI * 2);
+          ctx.ellipse(hw - 14, -hh + 26, 10, 6, 0, 0, Math.PI * 2);
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fill();
+        } else if (v.id === 3) {
+          // --- Siamese Point: Dark seal diamond mask ---
+          ctx.beginPath();
+          ctx.ellipse(hw - 6, -hh + 24, 20, 15, 0.1, 0, Math.PI * 2);
+          ctx.fillStyle = v.pointColor;
+          ctx.fill();
+        } else if (v.id === 4) {
+          // --- Peach Mochi: Soft strawberry blush spots ---
+          ctx.beginPath();
+          ctx.ellipse(0, hh + 2, 32, 14, 0, 0, Math.PI * 2);
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.arc(-hw + 20, -hh + 16 + wiggleOffset, 16, 0, Math.PI * 2);
+          ctx.fillStyle = v.blushColor;
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      drawWhiskersAndCheeks(ctx, hw, hh) {
+        // Soft Rosy Blush Spots
+        const isHappyOrPet = this.expression === 'happy' || this.isHovered || this.isPetting;
+        const blushAlpha = isHappyOrPet ? 0.65 : 0.25;
+
+        ctx.beginPath();
+        ctx.ellipse(hw - 4, -hh + 28, 7.5, 4.5, 0, 0, Math.PI * 2);
+        ctx.ellipse(hw - 22, -hh + 28, 7.5, 4.5, 0, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 130, 150, ${blushAlpha})`;
+        ctx.fill();
+
+        // 3 Delicate Whiskers on Front Cheek
+        ctx.strokeStyle = 'rgba(74, 68, 63, 0.55)';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        // Top whisker
+        ctx.moveTo(hw + 2, -hh + 26);
+        ctx.quadraticCurveTo(hw + 16, -hh + 23, hw + 25, -hh + 20);
+        // Middle whisker
+        ctx.moveTo(hw + 4, -hh + 29);
+        ctx.quadraticCurveTo(hw + 18, -hh + 29, hw + 26, -hh + 29);
+        // Bottom whisker
+        ctx.moveTo(hw + 2, -hh + 32);
+        ctx.quadraticCurveTo(hw + 16, -hh + 35, hw + 24, -hh + 38);
+        ctx.stroke();
+      }
+
+      drawEyes(ctx, v, hw, hh) {
+        const eye1X = hw - 20; // Left eye (inner)
+        const eye2X = hw - 4;  // Right eye (front)
+        const eyeY = -hh + 18;
+
+        if (this.expression === 'happy') {
+          // ^ . ^ Joyful Curved Eyes
+          ctx.strokeStyle = '#4A443F';
+          ctx.lineWidth = 2.8;
+          ctx.lineCap = 'round';
+          [eye1X, eye2X].forEach(ex => {
+            ctx.beginPath();
+            ctx.arc(ex, eyeY + 1, 6, Math.PI * 1.15, Math.PI * 1.85);
+            ctx.stroke();
+          });
+        } else if (this.expression === 'sleep') {
+          // - . - Sleeping Peaceful Eyes
+          ctx.strokeStyle = '#4A443F';
+          ctx.lineWidth = 2.6;
+          ctx.lineCap = 'round';
+          [eye1X, eye2X].forEach(ex => {
+            ctx.beginPath();
+            ctx.moveTo(ex - 6, eyeY + 1);
+            ctx.quadraticCurveTo(ex, eyeY + 4, ex + 6, eyeY + 1);
+            ctx.stroke();
+          });
+        } else if (this.expression === 'dizzy') {
+          // > < Cartoon Squint
+          ctx.strokeStyle = '#4A443F';
+          ctx.lineWidth = 2.8;
+          ctx.lineCap = 'round';
+          // Eye 1: >
+          ctx.beginPath();
+          ctx.moveTo(eye1X - 5, eyeY - 5); ctx.lineTo(eye1X + 4, eyeY); ctx.lineTo(eye1X - 5, eyeY + 5);
+          ctx.stroke();
+          // Eye 2: <
+          ctx.beginPath();
+          ctx.moveTo(eye2X + 5, eyeY - 5); ctx.lineTo(eye2X - 4, eyeY); ctx.lineTo(eye2X + 5, eyeY + 5);
+          ctx.stroke();
+        } else {
+          // Normal or Manic Laser Mode: Round glossy eyes with dynamic pupils
+          const eyeRadius = this.expression === 'laser' ? 8.5 : 7.5;
+          const blinkScale = this.blinkProgress > 0 ? (1 - Math.sin(this.blinkProgress * Math.PI) * 0.85) : 1;
+
+          [eye1X, eye2X].forEach(ex => {
+            ctx.save();
+            ctx.translate(ex, eyeY);
+            ctx.scale(1, blinkScale);
+
+            // Eye Sclera / Iris base
+            ctx.beginPath();
+            ctx.arc(0, 0, eyeRadius, 0, Math.PI * 2);
+            ctx.fillStyle = v.eyeColor;
+            ctx.fill();
+            ctx.strokeStyle = '#4A443F';
+            ctx.lineWidth = 2.2;
+            ctx.stroke();
+
+            // Pupil: In Laser mode, huge dilated black circle!
+            const pupilRadius = this.expression === 'laser' ? eyeRadius * 0.86 : 4.2;
+            const px = this.expression === 'laser' ? 0 : this.eyeLook.x;
+            const py = this.expression === 'laser' ? 0 : this.eyeLook.y;
+
+            ctx.beginPath();
+            ctx.arc(px, py, pupilRadius, 0, Math.PI * 2);
+            ctx.fillStyle = '#221F1E';
+            ctx.fill();
+
+            // Specular Glass Highlights (2 white glossy reflections)
+            ctx.beginPath();
+            ctx.arc(px - pupilRadius * 0.35, py - pupilRadius * 0.35, pupilRadius * 0.42, 0, Math.PI * 2);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(px + pupilRadius * 0.4, py + pupilRadius * 0.4, pupilRadius * 0.2, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.fill();
+
+            ctx.restore();
+          });
+        }
+      }
+
+      drawNoseAndMouth(ctx, v, hw, hh) {
+        const noseX = hw - 10;
+        const noseY = -hh + 24;
+
+        // Tiny Pink Rounded Triangle Nose
+        ctx.beginPath();
+        ctx.moveTo(noseX - 3.5, noseY - 2);
+        ctx.lineTo(noseX + 3.5, noseY - 2);
+        ctx.lineTo(noseX, noseY + 2.5);
+        ctx.closePath();
+        ctx.fillStyle = v.noseColor;
+        ctx.fill();
+
+        // Cute :3 Cat Smile W shape
+        ctx.strokeStyle = '#4A443F';
+        ctx.lineWidth = 2.2;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        // Left loop
+        ctx.moveTo(noseX, noseY + 2.5);
+        ctx.quadraticCurveTo(noseX - 4, noseY + 7, noseX - 8, noseY + 4.5);
+        // Right loop
+        ctx.moveTo(noseX, noseY + 2.5);
+        ctx.quadraticCurveTo(noseX + 4, noseY + 7, noseX + 8, noseY + 4.5);
+        ctx.stroke();
+
+        // When flying high speed, cute surprised open mouth!
+        const speed = Math.hypot(this.body.velocity.x, this.body.velocity.y);
+        if (speed > 8 || this.isLaserHunting) {
+          ctx.beginPath();
+          ctx.ellipse(noseX, noseY + 6.5, 3.2, 4.5, 0, 0, Math.PI * 2);
+          ctx.fillStyle = '#FF7F92';
+          ctx.fill();
+          ctx.stroke();
+        }
+      }
+
+      drawOrbitingStars(ctx, hw, hh) {
+        const time = Date.now() * 0.006;
+        for (let i = 0; i < 3; i++) {
+          const orbitAngle = time + (i * Math.PI * 2) / 3;
+          const sx = Math.cos(orbitAngle) * 26;
+          const sy = -hh - 12 + Math.sin(orbitAngle) * 8;
+          ctx.fillStyle = '#FFD152';
+          ctx.font = '14px Fredoka';
+          ctx.fillText('★', sx, sy);
+        }
+      }
+    }
+
+    // --- Cardboard Box Class ("If It Fits, I Sits") ---
+    class CardboardBox {
+      constructor(x, y) {
+        this.w = 120;
+        this.h = 80;
+        this.body = Bodies.rectangle(x, y, this.w, this.h, {
+          chamfer: { radius: 8 }, // Wide flat base (104px) so it sits rock-solid flat on the floor
+          restitution: 0.05, // Zero bounce: cardboard lands dead with a soft thud
+          friction: 0.35, // Strong ground grip
+          frictionStatic: 0.5, // High static friction: prevents creeping or jittering
+          frictionAir: 0.025, // Gentle air drag
+          density: 0.002,
+          label: 'box'
+        });
+        this.body.boxRef = this;
+        Composite.add(world, this.body);
+
+        this.occupant = null; // Reference to sitting MochiCat
+        this.stuckTimer = 0;
+      }
+
+      update(dt, cats) {
+        const bpos = this.body.position;
+        const hw = this.w / 2;
+        const hh = this.h / 2;
+
+        // Velocity clamping to prevent runaway high-speed impacts
+        const maxVel = 8.5;
+        const curVx = Math.max(-maxVel, Math.min(maxVel, this.body.velocity.x));
+        const curVy = Math.max(-maxVel, Math.min(maxVel, this.body.velocity.y));
+        if (curVx !== this.body.velocity.x || curVy !== this.body.velocity.y) {
+          Body.setVelocity(this.body, { x: curVx, y: curVy });
+        }
+
+        // Resting stabilization deadband: eliminates micro-vibration/jitter when nearly still
+        const speed = Math.hypot(this.body.velocity.x, this.body.velocity.y);
+        if (speed < 0.25) {
+          Body.setVelocity(this.body, { x: 0, y: 0 });
+        }
+        if (Math.abs(this.body.angularVelocity) < 0.008) {
+          Body.setAngularVelocity(this.body, 0);
+        }
+
+        // Proximity suction: If empty and cat drifts over box opening
+        if (!this.occupant) {
+          cats.forEach(cat => {
+            if (!cat.inBox && cat.boxCooldown <= 0) {
+              const cpos = cat.body.position;
+              const dist = Math.hypot(cpos.x - bpos.x, cpos.y - (bpos.y - 15));
+              if (dist < 55) {
+                this.captureCat(cat);
+              }
+            }
+          });
+        }
+
+        // Anti-Corner-Stuck: ONLY gently push horizontally inward if resting against side walls
+        const isNearLeft = bpos.x < 80;
+        const isNearRight = bpos.x > width - 80;
+
+        if ((isNearLeft || isNearRight) && speed < 0.2) {
+          this.stuckTimer += dt;
+          if (this.stuckTimer > 0.8) {
+            const pushX = isNearLeft ? 0.003 * this.body.mass : -0.003 * this.body.mass;
+            Body.applyForce(this.body, bpos, { x: pushX, y: 0 }); // Strictly horizontal nudge, no vertical smash
+            this.stuckTimer = 0;
+          }
+        } else {
+          this.stuckTimer = 0;
+        }
+      }
+
+      captureCat(cat) {
+        this.occupant = cat;
+        cat.inBox = this;
+        cat.body.isSensor = true; // Disable physics collisions so box & cat don't fight
+        audio.playPop();
+        spawnFloatingText(this.body.position.x, this.body.position.y - 45, 'If it fits, I sits! 📦', '#4A443F');
+        for (let i = 0; i < 6; i++) {
+          spawnParticle(this.body.position.x, this.body.position.y - 20, 'heart', '#FFAAA6');
+        }
+      }
+
+      ejectOccupant() {
+        if (!this.occupant) return;
+        const cat = this.occupant;
+        cat.inBox = null;
+        cat.body.isSensor = false;
+        cat.boxCooldown = 1.2; // Grace period to prevent instant re-suction!
+        this.occupant = null;
+        
+        // Gentle separation velocity in appropriate vertical direction
+        const tossY = engine.gravity.y < 0 ? 3.0 : -3.0;
+        Body.setVelocity(cat.body, { x: (Math.random() - 0.5) * 3, y: tossY });
+        audio.playPop();
+        spawnFloatingText(cat.body.position.x, cat.body.position.y - 30, 'Pop!', '#FFAAA6');
+      }
+
+      draw(ctx) {
+        const pos = this.body.position;
+        const angle = this.body.angle;
+
+        ctx.save();
+        ctx.translate(pos.x, pos.y);
+        ctx.rotate(angle);
+
+        const hw = this.w / 2;
+        const hh = this.h / 2;
+
+        // Cardboard Back Wall
+        ctx.fillStyle = '#CFA378';
+        ctx.fillRect(-hw, -hh, this.w, this.h);
+
+        // Cardboard Open Flaps (Angled outward)
+        ctx.strokeStyle = '#4A443F';
+        ctx.lineWidth = 2.4;
+
+        // Left Top Flap
+        ctx.save();
+        ctx.translate(-hw, -hh);
+        ctx.rotate(-0.5);
+        ctx.fillStyle = '#D9B187';
+        ctx.fillRect(0, -18, hw * 0.85, 18);
+        ctx.strokeRect(0, -18, hw * 0.85, 18);
+        ctx.restore();
+
+        // Right Top Flap
+        ctx.save();
+        ctx.translate(hw, -hh);
+        ctx.rotate(0.5);
+        ctx.fillStyle = '#D9B187';
+        ctx.fillRect(-hw * 0.85, -18, hw * 0.85, 18);
+        ctx.strokeRect(-hw * 0.85, -18, hw * 0.85, 18);
+        ctx.restore();
+
+        // Cute Delete Button '✕' on top right flap
+        ctx.save();
+        ctx.translate(hw - 8, -hh - 8);
+        ctx.beginPath();
+        ctx.arc(0, 0, 10, 0, Math.PI * 2);
+        ctx.fillStyle = '#FFAAA6';
+        ctx.fill();
+        ctx.strokeStyle = '#4A443F';
+        ctx.lineWidth = 1.8;
+        ctx.stroke();
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 11px Fredoka';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('✕', 0, 0);
+        ctx.restore();
+
+        // If Cat is sitting inside, draw its cute peeking head and paws!
+        if (this.occupant) {
+          ctx.save();
+          ctx.translate(0, -10);
+          this.occupant.renderProceduralLoaf(ctx, 0);
+          ctx.restore();
+        }
+
+        // Cardboard Front Wall (Occludes bottom half so cat is nestled inside)
+        ctx.fillStyle = '#E5BD92';
+        ctx.fillRect(-hw, -hh + 20, this.w, this.h - 20);
+        ctx.strokeStyle = '#4A443F';
+        ctx.lineWidth = 2.6;
+        ctx.strokeRect(-hw, -hh + 20, this.w, this.h - 20);
+
+        // Tape stripe & cute printed stamp
+        ctx.fillStyle = 'rgba(215, 175, 130, 0.6)';
+        ctx.fillRect(-hw + 8, -hh + 20, 14, this.h - 20);
+
+        // Stamped "FRAGILE / CAT" icon on side
+        ctx.fillStyle = '#7C5E43';
+        ctx.font = '600 11px Fredoka';
+        ctx.textAlign = 'center';
+        ctx.fillText('🐾 IF IT FITS, I SITS', 0, hh - 12);
+
+        ctx.restore();
+      }
+    }
+
+    // --- Catnip Cloud Class ---
+    class CatnipCloud {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.radius = 85;
+        this.life = 1.0;
+        this.decay = 0.0028;
+        this.puffPointers = [
+          { dx: -25, dy: -10, r: 45 },
+          { dx: 25, dy: -8, r: 40 },
+          { dx: 0, dy: -24, r: 50 },
+          { dx: 0, dy: 14, r: 42 }
+        ];
+      }
+
+      update(dt, cats) {
+        this.life -= this.decay;
+
+        // Check if any cat enters cloud
+        cats.forEach(cat => {
+          const cpos = cat.body.position;
+          const dist = Math.hypot(cpos.x - this.x, cpos.y - this.y);
+          if (dist < this.radius + 30 && cat.zoomieTimer <= 0.1) {
+            cat.zoomieTimer = 3.5;
+            audio.playCatnipSparkle();
+            spawnFloatingText(cpos.x, cpos.y - 35, '🌿 ZOOMIES!!', '#7BA850');
+            for (let i = 0; i < 8; i++) {
+              spawnParticle(cpos.x, cpos.y, 'star', '#A2D372');
+            }
+          }
+        });
+      }
+
+      draw(ctx) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, this.life * 0.75);
+        this.puffPointers.forEach(p => {
+          ctx.beginPath();
+          ctx.arc(this.x + p.dx, this.y + p.dy, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = '#C8E6A6';
+          ctx.fill();
+          ctx.strokeStyle = '#9CC478';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        });
+
+        // Floating leaves inside cloud
+        ctx.fillStyle = '#5A8A36';
+        ctx.font = '16px Fredoka';
+        ctx.textAlign = 'center';
+        ctx.fillText('🌿', this.x - 18, this.y - 12);
+        ctx.fillText('✨', this.x + 20, this.y - 8);
+        ctx.fillText('🌿', this.x + 4, this.y + 16);
+        ctx.restore();
+      }
+    }
+
+    // --- World State Collections ---
+    const cats = [];
+    const boxes = [];
+    const catnipClouds = [];
+
+    // Spawn Initial Cohort of 5 diverse squishy cats
+    function initSandbox() {
+      // Clear existing
+      cats.forEach(c => Composite.remove(world, c.body));
+      boxes.forEach(b => Composite.remove(world, b.body));
+      cats.length = 0;
+      boxes.length = 0;
+
+      const startX = width / 2;
+      const startY = height * 0.45;
+      const spacing = 135;
+
+      for (let i = 0; i < 5; i++) {
+        const cx = startX + (i - 2) * spacing;
+        const cy = startY + (Math.random() - 0.5) * 80;
+        const cat = new MochiCat(cx, cy, CAT_VARIETIES[i % CAT_VARIETIES.length]);
+        cats.push(cat);
+      }
+
+      // Initial Box in bottom-right corner
+      const box = new CardboardBox(width * 0.82, height - 120);
+      boxes.push(box);
+    }
+    initSandbox();
+
+    // --- Collision Chime & Squash Detection ---
+    Events.on(engine, 'collisionStart', event => {
+      event.pairs.forEach(pair => {
+        const { bodyA, bodyB } = pair;
+        const catBody = bodyA.label === 'cat' ? bodyA : bodyB.label === 'cat' ? bodyB : null;
+        const otherBody = catBody === bodyA ? bodyB : bodyA;
+
+        if (catBody && catBody.catRef) {
+          const cat = catBody.catRef;
+          // Relative velocity calculation
+          const relVel = {
+            x: bodyA.velocity.x - bodyB.velocity.x,
+            y: bodyA.velocity.y - bodyB.velocity.y
+          };
+          const speed = Math.hypot(relVel.x, relVel.y);
+
+          if (speed > 1.2) {
+            audio.playChime(speed);
+            const norm = pair.collision.normal;
+            cat.triggerSquash(norm.x, norm.y, speed);
+          }
+
+          // Box entry check
+          if (otherBody.label === 'box' && otherBody.boxRef) {
+            const box = otherBody.boxRef;
+            if (!box.occupant && !cat.inBox) {
+              box.captureCat(cat);
+            }
+          }
+        }
+      });
+    });
+
+    // --- Interactive Mouse & Touch Fidget Controls ---
+    const mousePos = { x: width / 2, y: height / 2 };
+    let isMouseDown = false;
+    let isLaserModeActive = false; // Toggled via button or right-click hold
+    let laserButtonPinned = false;
+
+    // Interaction Mode: 'drag' (Direct pick up and toss) or 'slingshot' (elastic pull-back)
+    let interactionMode = 'drag';
+
+    // Direct Cat Drag State
+    let draggedCat = null;
+    let draggedCatOffset = { x: 0, y: 0 };
+
+    // Slingshot Dough Drag State
+    let slingshotCat = null;
+    let dragStartPos = { x: 0, y: 0 };
+    let dragCurrentPos = { x: 0, y: 0 };
+
+    // Box Drag State
+    let draggedBox = null;
+    let boxDragOffset = { x: 0, y: 0 };
+
+    // Disable default context menu so Right Click acts as Red Laser Dot
+    window.addEventListener('contextmenu', e => e.preventDefault());
+
+    function getPointerPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const cx = (e.touches && e.touches.length > 0) ? e.touches[0].clientX : e.clientX;
+      const cy = (e.touches && e.touches.length > 0) ? e.touches[0].clientY : e.clientY;
+      return {
+        x: Math.max(0, Math.min(width, cx - rect.left)),
+        y: Math.max(0, Math.min(height, cy - rect.top))
+      };
+    }
+
+    // Pointer Down
+    window.addEventListener('pointerdown', e => {
+      audio.init();
+      const pos = getPointerPos(e);
+      mousePos.x = pos.x;
+      mousePos.y = pos.y;
+
+      if (e.button === 2) {
+        // Right Click: Red Laser Dot trigger
+        isLaserModeActive = true;
+        canvas.classList.add('laser-mode');
+        audio.playSqueak();
+        return;
+      }
+
+      if (isLaserModeActive) return; // In laser mode, pointer aims the dot
+
+      isMouseDown = true;
+
+      // 1. Check if clicked a Cardboard Box delete '✕' badge
+      const clickedDeleteBox = boxes.find(b => {
+        const hw = b.w / 2;
+        const hh = b.h / 2;
+        const bx = b.body.position.x + (hw - 8) * Math.cos(b.body.angle) - (-hh - 8) * Math.sin(b.body.angle);
+        const by = b.body.position.y + (hw - 8) * Math.sin(b.body.angle) + (-hh - 8) * Math.cos(b.body.angle);
+        return Math.hypot(bx - pos.x, by - pos.y) < 22;
+      });
+      if (clickedDeleteBox) {
+        if (clickedDeleteBox.occupant) clickedDeleteBox.ejectOccupant();
+        Composite.remove(world, clickedDeleteBox.body);
+        const idx = boxes.indexOf(clickedDeleteBox);
+        if (idx !== -1) boxes.splice(idx, 1);
+        audio.playPop();
+        showToast("🗑️ Box removed!");
+        return;
+      }
+
+      // 2. Check if clicked a Cat sitting inside a box -> Pop it out immediately!
+      const sittingCat = cats.find(c => c.inBox && Math.hypot(c.body.position.x - pos.x, c.body.position.y - pos.y) < 55);
+      if (sittingCat) {
+        sittingCat.inBox.ejectOccupant();
+        return;
+      }
+
+      // 3. Direct Left-Drag any Cat (Pick up, squish, carry, drop in box, or toss!)
+      const clickedCat = cats.find(c => !c.inBox && Math.hypot(c.body.position.x - pos.x, c.body.position.y - pos.y) < 55);
+      if (clickedCat) {
+        draggedCat = clickedCat;
+        draggedCatOffset = { x: pos.x - clickedCat.body.position.x, y: pos.y - clickedCat.body.position.y };
+        canvas.classList.add('grabbing');
+        draggedCat.expression = 'happy';
+        return;
+      }
+
+      // 4. Drag a Cardboard Box
+      const clickedBox = boxes.find(b => Math.hypot(b.body.position.x - pos.x, b.body.position.y - pos.y) < 65);
+      if (clickedBox) {
+        draggedBox = clickedBox;
+        boxDragOffset.x = pos.x - draggedBox.body.position.x;
+        boxDragOffset.y = pos.y - draggedBox.body.position.y;
+        canvas.classList.add('grabbing');
+        return;
+      }
+    });
+
+    // Pointer Move
+    window.addEventListener('pointermove', e => {
+      const pos = getPointerPos(e);
+      mousePos.x = pos.x;
+      mousePos.y = pos.y;
+
+      if (draggedCat) {
+        // Direct Cat Drag: follow cursor with soft plushie spring feel
+        const targetX = Math.max(45, Math.min(width - 45, pos.x - draggedCatOffset.x));
+        const targetY = Math.max(35, Math.min(height - 35, pos.y - draggedCatOffset.y));
+        const vx = (targetX - draggedCat.body.position.x) * 0.45;
+        const vy = (targetY - draggedCat.body.position.y) * 0.45;
+        Body.setVelocity(draggedCat.body, { x: vx, y: vy });
+        Body.setPosition(draggedCat.body, {
+          x: draggedCat.body.position.x + vx,
+          y: draggedCat.body.position.y + vy
+        });
+        draggedCat.scaleX = 0.9;
+        draggedCat.scaleY = 1.15;
+        draggedCat.expression = 'happy';
+
+        // Check if carried directly into a cardboard box opening!
+        boxes.forEach(box => {
+          if (!box.occupant && draggedCat) {
+            const bpos = box.body.position;
+            if (Math.hypot(targetX - bpos.x, targetY - (bpos.y - 20)) < 45) {
+              box.captureCat(draggedCat);
+              draggedCat = null;
+            }
+          }
+        });
+      } else if (slingshotCat) {
+        dragCurrentPos.x = pos.x;
+        dragCurrentPos.y = pos.y;
+      } else if (draggedBox) {
+        Body.setPosition(draggedBox.body, {
+          x: pos.x - boxDragOffset.x,
+          y: pos.y - boxDragOffset.y
+        });
+        Body.setVelocity(draggedBox.body, { x: 0, y: 0 });
+      }
+    });
+
+    // Pointer Up
+    window.addEventListener('pointerup', e => {
+      if (e.button === 2) {
+        if (!laserButtonPinned) {
+          isLaserModeActive = false;
+          canvas.classList.remove('laser-mode');
+        }
+        return;
+      }
+
+      isMouseDown = false;
+      canvas.classList.remove('grabbing');
+
+      // Direct Drag Release (Toss momentum)
+      if (draggedCat) {
+        const speed = Math.hypot(draggedCat.body.velocity.x, draggedCat.body.velocity.y);
+        if (speed > 5) {
+          audio.playBoing(speed * 2);
+          spawnFloatingText(draggedCat.body.position.x, draggedCat.body.position.y - 30, 'Wheee!', '#FFAAA6');
+        }
+        draggedCat = null;
+      }
+
+      // Slingshot Release Execution
+      if (slingshotCat) {
+        const dx = dragStartPos.x - dragCurrentPos.x;
+        const dy = dragStartPos.y - dragCurrentPos.y;
+        const dist = Math.hypot(dx, dy);
+
+        if (dist > 16) {
+          const impulseMultiplier = 0.0036;
+          const force = {
+            x: dx * impulseMultiplier,
+            y: dy * impulseMultiplier
+          };
+          Body.applyForce(slingshotCat.body, slingshotCat.body.position, force);
+          audio.playBoing(dist);
+
+          for (let i = 0; i < 7; i++) {
+            spawnParticle(slingshotCat.body.position.x, slingshotCat.body.position.y, 'star', '#FFE699');
+          }
+          spawnFloatingText(slingshotCat.body.position.x, slingshotCat.body.position.y - 25, 'Boing!', '#FFB396');
+        }
+
+        slingshotCat = null;
+      }
+
+      draggedBox = null;
+    });
+
+    // --- UI Buttons & Actions ---
+    const btnSpawnCat = document.getElementById('btnSpawnCat');
+    const btnGravity = document.getElementById('btnGravity');
+    const gravityIcon = document.getElementById('gravityIcon');
+    const gravityText = document.getElementById('gravityText');
+    const btnLaser = document.getElementById('btnLaser');
+    const btnBox = document.getElementById('btnBox');
+    const btnCatnip = document.getElementById('btnCatnip');
+    const btnReset = document.getElementById('btnReset');
+    const btnAudio = document.getElementById('btnAudio');
+    const audioIcon = document.getElementById('audioIcon');
+    const statusToast = document.getElementById('statusToast');
+
+    let toastTimeout = null;
+    function showToast(msg) {
+      statusToast.textContent = msg;
+      statusToast.classList.add('show');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        statusToast.classList.remove('show');
+      }, 2400);
+    }
+
+    // Spawn Cat
+    function spawnNewCat() {
+      audio.init();
+      const dropX = Math.max(100, Math.min(width - 100, mousePos.x + (Math.random() - 0.5) * 60));
+      const cat = new MochiCat(dropX, 60);
+      cats.push(cat);
+      audio.playPop();
+      showToast(`✨ Spawned a fresh ${cat.variety.name}!`);
+      for (let i = 0; i < 6; i++) {
+        spawnParticle(dropX, 60, 'bubble', cat.variety.baseColor);
+      }
+    }
+    btnSpawnCat.addEventListener('click', spawnNewCat);
+
+    // Smooth Gravity Multi-Toggle Flow (Earth -> Zero-G -> Low-G -> Inverted)
+    const GRAVITY_MODES = [
+      { name: "Earth Gravity", icon: "🌍", x: 0, y: 1.0, msg: "Floor-slamming Plump Loaves!" },
+      { name: "Zero-G Space", icon: "🌌", x: 0, y: 0, msg: "Zero-G! Floating endlessly in space" },
+      { name: "Cozy Low-G", icon: "🌙", x: 0, y: 0.22, msg: "Moon Loaves! Gentle floaty hops" },
+      { name: "Inverted Chaos", icon: "🙃", x: 0, y: -0.45, msg: "Inverted! Floating gently to the ceiling!" }
+    ];
+    let gravityIndex = 0;
+    let targetGravity = { x: 0, y: 1.0 };
+    let currentGravity = { x: 0, y: 1.0 };
+
+    function cycleGravity() {
+      audio.init();
+      gravityIndex = (gravityIndex + 1) % GRAVITY_MODES.length;
+      const g = GRAVITY_MODES[gravityIndex];
+      targetGravity.x = g.x;
+      targetGravity.y = g.y;
+      gravityIcon.textContent = g.icon;
+      gravityText.textContent = g.name;
+      audio.playBoing(0.8);
+      showToast(`${g.icon} ${g.msg}`);
+    }
+    btnGravity.addEventListener('click', cycleGravity);
+
+    // Laser Toggle
+    function toggleLaser() {
+      audio.init();
+      laserButtonPinned = !laserButtonPinned;
+      isLaserModeActive = laserButtonPinned;
+      btnLaser.classList.toggle('active', laserButtonPinned);
+      canvas.classList.toggle('laser-mode', laserButtonPinned);
+      if (laserButtonPinned) {
+        audio.playSqueak();
+        showToast("🔴 Red Laser Active! Watch their butts wiggle!");
+      } else {
+        showToast("Laser deactivated");
+      }
+    }
+    btnLaser.addEventListener('click', toggleLaser);
+
+    // Drop Box
+    function dropBox() {
+      audio.init();
+      const dropX = Math.max(120, Math.min(width - 120, mousePos.x));
+      const box = new CardboardBox(dropX, 60);
+      boxes.push(box);
+      audio.playPop();
+      showToast("📦 Cardboard Box Dropped! If it fits, I sits!");
+    }
+    btnBox.addEventListener('click', dropBox);
+
+    // Eject All Cats from Boxes (Hotkey E)
+    function ejectAllCats() {
+      audio.init();
+      let anyEjected = false;
+      boxes.forEach(b => {
+        if (b.occupant) {
+          b.ejectOccupant();
+          anyEjected = true;
+        }
+      });
+      if (anyEjected) {
+        showToast("📤 Ejected all cats from boxes!");
+      } else {
+        showToast("No cats are currently in boxes!");
+      }
+    }
+
+    // Clear All Boxes
+    function clearAllBoxes() {
+      audio.init();
+      const count = boxes.length;
+      boxes.forEach(b => {
+        if (b.occupant) b.ejectOccupant();
+        Composite.remove(world, b.body);
+      });
+      boxes.length = 0;
+      audio.playBoing(0.5);
+      showToast(count > 0 ? "🗑️ Removed all boxes!" : "No boxes to remove!");
+    }
+
+    // Catnip Cloud (Zoomies Explainer + Action)
+    function triggerCatnip() {
+      audio.init();
+      const cx = Math.max(100, Math.min(width - 100, mousePos.x));
+      const cy = Math.max(100, Math.min(height - 100, mousePos.y));
+      catnipClouds.push(new CatnipCloud(cx, cy));
+      audio.playCatnipSparkle();
+      showToast("🌿 Catnip Zoomies! Real cats get hyper from catnip—watch the rainbow sprints!");
+    }
+    btnCatnip.addEventListener('click', triggerCatnip);
+
+    // Reset Sandbox
+    btnReset.addEventListener('click', () => {
+      audio.init();
+      initSandbox();
+      audio.playBoing(0.5);
+      showToast("🧹 Cleaned the sandbox!");
+    });
+
+    // Audio Toggle
+    btnAudio.addEventListener('click', () => {
+      audio.init();
+      audio.muted = !audio.muted;
+      audioIcon.textContent = audio.muted ? '🔇' : '🔊';
+      btnAudio.classList.toggle('btn-strawberry', audio.muted);
+      showToast(audio.muted ? "Sound Muted" : "Sound Enabled 🎵");
+    });
+
+    // Keyboard Shortcuts
+    window.addEventListener('keydown', e => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      const key = e.key.toLowerCase();
+      if (key === 'c') spawnNewCat();
+      else if (key === 'd') showToast("🖐️ Left-Drag any cat to carry & toss!");
+      else if (e.code === 'Space') { e.preventDefault(); cycleGravity(); }
+      else if (key === 'l') toggleLaser();
+      else if (key === 'b') dropBox();
+      else if (key === 'e') ejectAllCats();
+      else if (key === 'n') triggerCatnip();
+      else if (key === 'r') { initSandbox(); showToast("🧹 Reset sandbox!"); }
+      else if (key === 'm') { btnAudio.click(); }
+    });
+
+    // --- Main Game Loop (Physics Update + Procedural Rendering) ---
+    let lastTime = performance.now();
+
+    function renderLoop(currentTime) {
+      const dt = Math.min(0.033, (currentTime - lastTime) / 1000);
+      lastTime = currentTime;
+
+      // 0. Smooth Gravity Flow Interpolation
+      const flowRate = Math.min(1, 4.0 * dt);
+      currentGravity.x += (targetGravity.x - currentGravity.x) * flowRate;
+      currentGravity.y += (targetGravity.y - currentGravity.y) * flowRate;
+      engine.gravity.x = currentGravity.x;
+      engine.gravity.y = currentGravity.y;
+
+      // 1. Step Matter.js Physics Engine
+      Engine.update(engine, dt * 1000);
+
+      // 2. Clear Screen
+      ctx.clearRect(0, 0, width, height);
+
+      // 3. Update & Draw Catnip Clouds
+      for (let i = catnipClouds.length - 1; i >= 0; i--) {
+        const cloud = catnipClouds[i];
+        cloud.update(dt, cats);
+        cloud.draw(ctx);
+        if (cloud.life <= 0) catnipClouds.splice(i, 1);
+      }
+
+      // 4. Update & Draw Cardboard Boxes
+      boxes.forEach(box => {
+        box.update(dt, cats);
+        box.draw(ctx);
+      });
+
+      // 5. Update & Draw Mochi Cats
+      let anyCatPetting = false;
+      cats.forEach(cat => {
+        cat.update(dt, mousePos, isLaserModeActive);
+        // Only draw here if not sitting inside box (box renders occupant in its draw stack)
+        if (!cat.inBox) {
+          cat.draw(ctx);
+        }
+        if (cat.isPetting) anyCatPetting = true;
+      });
+
+      // Purr sound synthesis control
+      audio.setPurr(anyCatPetting);
+
+      // 6. Draw Slingshot Elastic Rubber Band & Trajectory
+      if (slingshotCat) {
+        ctx.save();
+        const start = dragStartPos;
+        const cur = dragCurrentPos;
+        const dx = start.x - cur.x;
+        const dy = start.y - cur.y;
+        const dist = Math.hypot(dx, dy);
+
+        // Elastic guideline
+        ctx.beginPath();
+        ctx.moveTo(start.x, start.y);
+        ctx.lineTo(cur.x, cur.y);
+        ctx.strokeStyle = '#FFAAA6';
+        ctx.lineWidth = Math.max(3, 10 - dist * 0.03);
+        ctx.lineCap = 'round';
+        ctx.setLineDash([8, 8]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Trajectory preview dots
+        ctx.beginPath();
+        const steps = 6;
+        for (let i = 1; i <= steps; i++) {
+          const t = i * 0.18;
+          const px = start.x + dx * t * 0.9;
+          const py = start.y + dy * t * 0.9 + 0.5 * (engine.gravity.y * 300) * (t * t);
+          ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+        }
+        ctx.fillStyle = 'rgba(255, 170, 166, 0.7)';
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      // 7. Draw Red Laser Dot (When Active)
+      if (isLaserModeActive) {
+        ctx.save();
+        const pulse = 1 + Math.sin(currentTime * 0.015) * 0.25;
+
+        // Outer neon glow
+        ctx.beginPath();
+        ctx.arc(mousePos.x, mousePos.y, 14 * pulse, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 50, 70, 0.28)';
+        ctx.fill();
+
+        // Mid aura
+        ctx.beginPath();
+        ctx.arc(mousePos.x, mousePos.y, 8 * pulse, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 30, 50, 0.65)';
+        ctx.fill();
+
+        // Intense core
+        ctx.beginPath();
+        ctx.arc(mousePos.x, mousePos.y, 4, 0, Math.PI * 2);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      // 8. Update & Draw Particles (Hearts, Stars, Zzz, Bubbles)
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.angle += p.rotSpeed;
+        p.life -= p.decay;
+
+        if (p.life <= 0) {
+          particles.splice(i, 1);
+          continue;
+        }
+
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.angle);
+        ctx.globalAlpha = Math.max(0, p.life);
+
+        if (p.type === 'heart') {
+          ctx.fillStyle = p.color;
+          ctx.font = `${p.size * 1.4}px Fredoka`;
+          ctx.textAlign = 'center';
+          ctx.fillText('♥', 0, 0);
+        } else if (p.type === 'star') {
+          ctx.fillStyle = p.color;
+          ctx.font = `${p.size * 1.3}px Fredoka`;
+          ctx.textAlign = 'center';
+          ctx.fillText('★', 0, 0);
+        } else if (p.type === 'zzz') {
+          ctx.fillStyle = p.color;
+          ctx.font = '600 13px Fredoka';
+          ctx.textAlign = 'center';
+          ctx.fillText('z', 0, 0);
+        } else {
+          // Soft mochi bubble
+          ctx.beginPath();
+          ctx.arc(0, 0, p.size, 0, Math.PI * 2);
+          ctx.fillStyle = p.color;
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // 9. Update & Draw Floating Action Badges
+      for (let i = floatingToasts.length - 1; i >= 0; i--) {
+        const t = floatingToasts[i];
+        t.y -= 0.6;
+        t.life -= t.decay;
+        if (t.life <= 0) {
+          floatingToasts.splice(i, 1);
+          continue;
+        }
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, t.life);
+        ctx.font = '700 13px Fredoka';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = t.color;
+        ctx.fillText(t.text, t.x, t.y);
+        ctx.restore();
+      }
+
+      requestAnimationFrame(renderLoop);
+    }
+
+    // Launch Engine & Animation Loop
+    requestAnimationFrame(renderLoop);
+
+  </script>
+</body>
+</html>
